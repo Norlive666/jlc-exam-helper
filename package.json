@@ -1,0 +1,13 @@
+{
+  "name": "jlc-exam-helper",
+  "version": "1.2.1",
+  "private": true,
+  "description": "DeepSeek userscript helper for Kaoshixing and JLC exam pages",
+  "scripts": {
+    "test": "node answers.test.cjs && node images.test.cjs && node key-menu.test.cjs && node bank.test.cjs",
+    "check": "node --check kaoshixing-deepseek.user.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
