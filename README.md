@@ -1,6 +1,6 @@
 # JLC Exam Helper
 
-考试星 / 嘉立创考试页面的 DeepSeek 图文题填写助手，当前版本 v1.2.1。
+考试星 / 嘉立创考试页面的 DeepSeek 图文题填写助手，当前版本 v1.2.2。
 
 [安装油猴脚本](https://raw.githubusercontent.com/Norlive666/jlc-exam-helper/main/kaoshixing-deepseek.user.js) · [源码](https://github.com/Norlive666/jlc-exam-helper/blob/main/kaoshixing-deepseek.user.js)
 
@@ -47,3 +47,7 @@ node --check kaoshixing-deepseek.user.js
 
 单元测试使用模拟的扩展存储。真实考试网页、真实 DeepSeek 请求及浏览器重启持久化仍需安装后验证。
 本仓库的测试不依赖浏览器或真实 API，可使用 Node.js 运行 `npm test`。
+
+## 许可证
+
+本项目使用 [MIT License](LICENSE)，Copyright (c) 2026 Norlive666。

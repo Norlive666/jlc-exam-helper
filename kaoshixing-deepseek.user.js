@@ -4,7 +4,8 @@
 // @homepageURL  https://github.com/Norlive666/jlc-exam-helper
 // @downloadURL  https://raw.githubusercontent.com/Norlive666/jlc-exam-helper/main/kaoshixing-deepseek.user.js
 // @updateURL    https://raw.githubusercontent.com/Norlive666/jlc-exam-helper/main/kaoshixing-deepseek.user.js
-// @version      1.2.1
+// @version      1.2.2
+// @license      MIT
 // @description  手动开始，支持图片并跳过已答题，支持停止，不交卷
 // @match        https://exam.kaoshixing.com/*
 // @match        https://www.kaoshixing.com/*
