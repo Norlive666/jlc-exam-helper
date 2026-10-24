@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Operit 识题</string>
+    <string name="accessibility_description">读取当前屏幕，将题目和选项发送至你配置的 DeepSeek API，并自动点击选项。任务在后台运行，可从通知栏关闭。支持安卓 11 及以上。</string>
+    <string name="heading">Operit 识题</string>
+    <string name="intro">填写 DeepSeek API Key 并开启权限。以后打开应用即开始后台识题，手动切换题目即可继续。</string>
+    <string name="api_key_hint">DeepSeek API Key</string>
+    <string name="api_caption">官方接口 · deepseek-flash</string>
+    <string name="data_notice">运行时屏幕截图与界面文字会发送至 DeepSeek。应用仅执行选项点击，不翻页、不交卷。截图不写入相册或文件。</string>
+    <string name="permissions">开启无障碍服务</string>
+    <string name="notifications">允许通知</string>
+    <string name="start">保存并后台运行</string>
+    <string name="stop">关闭识题</string>
+    <string name="permission_needed">请先开启本应用的无障碍服务与通知权限。</string>
+    <string name="key_needed">请填写 DeepSeek API Key。</string>
+    <string name="running">正在后台识题</string>
+    <string name="waiting">等待题目出现</string>
+    <string name="analyzing">正在识别题目</string>
+    <string name="selected">已选择答案，等待下一题</string>
+    <string name="screen_changed">页面已变化，重新识别</string>
+    <string name="idle_screen">等待屏幕亮起并解锁</string>
+    <string name="unavailable_screen">当前页面无法读取，等待页面变化</string>
+    <string name="notification_channel">后台识题状态</string>
+    <string name="error_prefix">识题暂停：%1$s</string>
+    <string name="settings_error">无法保存 API Key：%1$s</string>
+</resources>

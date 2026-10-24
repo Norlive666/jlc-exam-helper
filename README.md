@@ -51,3 +51,11 @@ node --check kaoshixing-deepseek.user.js
 ## 许可证
 
 本项目使用 [MIT License](LICENSE)，Copyright (c) 2026 Norlive666。
+
+## Android 识题助手（exam-helper 分支）
+
+本分支新增基于 Operit 精简的安卓独立应用：只接入 DeepSeek API，后台识别当前屏幕中的选择题并点击选项，通过通知栏关闭。
+
+- [Android 使用与构建说明](lite/README.md)
+- [GitHub 自动构建与 APK 下载](https://github.com/Norlive666/jlc-exam-helper/actions/workflows/exam-helper-android.yml?query=branch%3Aexam-helper)
+- Android 模块的来源与 LGPL 许可见 [lite/UPSTREAM.md](lite/UPSTREAM.md)；原油猴脚本继续使用根目录 MIT 许可。

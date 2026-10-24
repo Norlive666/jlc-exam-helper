@@ -1,0 +1,68 @@
+name: Build Exam Helper APK
+
+on:
+  push:
+    branches: [exam-helper]
+    paths:
+      - 'lite/**'
+      - '.github/workflows/exam-helper-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exam-helper-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Test and build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36 SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run tests and build APK
+        run: |
+          chmod +x lite/gradlew
+          ./lite/gradlew -p lite :app:testDebugUnitTest :app:assembleDebug --no-daemon --max-workers=1
+
+      - name: Prepare APK download
+        run: |
+          cp lite/app/build/outputs/apk/debug/app-debug.apk exam-helper-debug.apk
+          sha256sum exam-helper-debug.apk > exam-helper-debug.apk.sha256
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-helper-debug-apk
+          path: |
+            exam-helper-debug.apk
+            exam-helper-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-helper-test-reports
+          path: lite/app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
