@@ -1,8 +1,32 @@
 package com.ai.assistance.operit.quiz;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class ScreenFrame {
+    private static final Pattern NATIVE_SELECTION = Pattern.compile(
+        "\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]:(true|false):(true|false):(true|false)");
+
+    Boolean selectedAt(QuizProtocol.Tap tap) {
+        Matcher nodes = NATIVE_SELECTION.matcher(selectionState);
+        long area = Long.MAX_VALUE;
+        Boolean selected = null;
+        while (nodes.find()) {
+            if (!Boolean.parseBoolean(nodes.group(5))) continue;
+            int left = Integer.parseInt(nodes.group(1));
+            int top = Integer.parseInt(nodes.group(2));
+            int right = Integer.parseInt(nodes.group(3));
+            int bottom = Integer.parseInt(nodes.group(4));
+            long size = (long) (right - left) * (bottom - top);
+            if (tap.x >= left && tap.x < right && tap.y >= top && tap.y < bottom && size < area) {
+                area = size;
+                selected = Boolean.parseBoolean(nodes.group(6));
+            }
+        }
+        return selected;
+    }
+
     static String normalizeUiText(String xml) {
         return xml.replaceAll("\\b\\d{1,2}:\\d{2}(?::\\d{2})?\\b", "")
             .replaceAll(" (?:checked|selected|focused)=\"[^\"]*\"", "")

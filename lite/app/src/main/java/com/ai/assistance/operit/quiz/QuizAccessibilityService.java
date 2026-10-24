@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class QuizAccessibilityService extends UIAccessibilityService {
     static final int NOTIFICATION_ID = 6101;
+    static final QuizHistory HISTORY = new QuizHistory();
     private static final String CHANNEL = "quiz_agent_status";
     private static volatile QuizAccessibilityService instance;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -37,6 +38,8 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     private DeepSeekClient client;
     private Future<?> task;
     private volatile boolean running;
+    private QuizOverlay overlay;
+    private long currentRound;
 
     static QuizAccessibilityService current() { return instance; }
 
@@ -62,6 +65,11 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         }
         if (running) return;
         DeepSeekClient model = new DeepSeekClient(settings.apiKey());
+        if (overlay == null) overlay = new QuizOverlay(this, this::recognizeNow, () ->
+            startActivity(new Intent(this, QuizHistoryActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+        overlay.show();
+        overlay.status("等待题目");
+        currentRound = 0;
         client = model;
         long token = generation.incrementAndGet();
         settings.setRunning(true);
@@ -95,12 +103,25 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         });
     }
 
-    void stopAgent() {
+    private void cancelWork() {
         running = false;
         generation.incrementAndGet();
         if (settings != null) settings.setRunning(false);
         if (task != null) task.cancel(true);
         if (client != null) client.close();
+    }
+
+    void recognizeNow() {
+        if (currentRound != 0) HISTORY.event(currentRound, "手动重识别", "用户请求重新读取当前屏幕");
+        cancelWork();
+        try { startAgent(); }
+        catch (Exception error) { showError(error); }
+    }
+
+    void stopAgent() {
+        if (running && currentRound != 0) HISTORY.event(currentRound, "已停止", "任务已取消");
+        cancelWork();
+        if (overlay != null) overlay.close();
         getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID);
     }
 
@@ -152,8 +173,15 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     private void showError(Exception error) {
         Log.e("OperitQuiz", "Agent stopped: " + error.getClass().getSimpleName());
         String detail = error.getMessage();
+        if (detail == null) detail = error.getClass().getSimpleName();
+        if (currentRound == 0) currentRound = HISTORY.begin("当前屏幕");
+        HISTORY.event(currentRound, "识题暂停", detail);
+        if (overlay != null) {
+            overlay.captureHidden(false);
+            overlay.status("识题暂停\n" + detail);
+        }
         showNotification(getString(R.string.error_prefix,
-            detail == null ? error.getClass().getSimpleName() : detail));
+            detail));
     }
 
     private void status(long token, int text) {
@@ -188,7 +216,8 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
             Rect bounds = new Rect();
             node.getBoundsInScreen(bounds);
             selection.append(bounds.toShortString()).append(':')
-                .append(node.isChecked()).append(':').append(node.isSelected()).append('\n');
+                .append(node.isCheckable()).append(':').append(node.isChecked()).append(':')
+                .append(node.isSelected()).append('\n');
         }
         for (int i = 0; i < node.getChildCount(); i++) {
             AccessibilityNodeInfo child = node.getChild(i);
@@ -201,19 +230,32 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     private final class PhoneScreen implements QuizSession.Screen {
         private final long token;
         private ScreenFrame lastCaptured;
+        private long round;
+        private boolean unavailable;
+        private String captureDetail = "未获得可读取的题目屏幕";
 
         PhoneScreen(long token) { this.token = token; }
 
         @Override public ScreenFrame capture() throws Exception {
+            try {
+                hideOverlay();
+                return captureFrame();
+            } finally { restoreOverlay(); }
+        }
+
+        private ScreenFrame captureFrame() throws Exception {
             CompletableFuture<WindowState> snapshot = new CompletableFuture<>();
             main.post(() -> {
                 try {
                     if (!active(token) || !notificationAvailable()
                             || !getSystemService(PowerManager.class).isInteractive()
                             || getSystemService(KeyguardManager.class).isKeyguardLocked()) {
+                        captureDetail = "任务已停止、通知不可用，或屏幕关闭/锁定";
                         snapshot.complete(null);
                     } else {
-                        snapshot.complete(windowState());
+                        WindowState state = windowState();
+                        if (state == null) captureDetail = "无可读窗口，或正处于配置/历史页；请返回题目页";
+                        snapshot.complete(state);
                     }
                 } catch (RuntimeException error) {
                     snapshot.completeExceptionally(error);
@@ -225,7 +267,10 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
             Bitmap bitmap = null;
             try {
                 // Operit's provider owns screenshot rate-limiting and HardwareBuffer lifetime.
-                if (!captureScreenshot(file.getAbsolutePath(), "png") || !active(token)) return null;
+                if (!captureScreenshot(file.getAbsolutePath(), "png") || !active(token)) {
+                    captureDetail = "系统未返回截图，或任务已取消";
+                    return null;
+                }
                 bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
                 if (bitmap == null) throw new IllegalStateException("截图无法解码");
                 ScreenFrame frame = encodeFrame(bitmap, before);
@@ -238,7 +283,10 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
                         unchanged.completeExceptionally(error);
                     }
                 });
-                if (!unchanged.get(5, TimeUnit.SECONDS)) return null;
+                if (!unchanged.get(5, TimeUnit.SECONDS)) {
+                    captureDetail = "截图期间页面已变化，已丢弃当前截图";
+                    return null;
+                }
                 lastCaptured = frame;
                 return frame;
             } finally {
@@ -248,6 +296,13 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         }
 
         @Override public boolean tap(QuizProtocol.Tap tap) throws Exception {
+            try {
+                hideOverlay();
+                return performTap(tap);
+            } finally { restoreOverlay(); }
+        }
+
+        private boolean performTap(QuizProtocol.Tap tap) throws Exception {
             ScreenFrame expected = lastCaptured;
             CompletableFuture<Boolean> result = new CompletableFuture<>();
             main.post(() -> {
@@ -278,6 +333,40 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
             }
             if (clicked) Thread.sleep(350);
             return clicked;
+        }
+
+        private void hideOverlay() throws Exception {
+            CompletableFuture<Void> hidden = new CompletableFuture<>();
+            main.post(() -> {
+                if (active(token) && overlay != null) overlay.captureHidden(true);
+                // Let the compositor remove the overlay before screenshots or gestures.
+                main.postDelayed(() -> hidden.complete(null), 120);
+            });
+            hidden.get(5, TimeUnit.SECONDS);
+        }
+
+        private void restoreOverlay() {
+            main.post(() -> { if (active(token) && overlay != null) overlay.captureHidden(false); });
+        }
+
+        @Override public void trace(String stage, String detail) {
+            String information = stage.equals("无法读取屏幕") ? captureDetail : detail;
+            main.post(() -> {
+                if (!active(token)) return;
+                if (stage.equals("开始识别")) {
+                    unavailable = false;
+                    round = HISTORY.begin(information);
+                } else if (stage.equals("无法读取屏幕")) {
+                    if (!unavailable) round = HISTORY.begin("当前屏幕");
+                    unavailable = true;
+                }
+                if (round == 0) round = HISTORY.begin("当前屏幕");
+                currentRound = round;
+                HISTORY.event(round, stage, information);
+                String brief = information.replace('\n', ' ');
+                if (brief.length() > 42) brief = brief.substring(0, 42) + "…";
+                if (overlay != null) overlay.status(stage + "\n" + brief);
+            });
         }
 
         @Override public void status(QuizSession.Status state) {

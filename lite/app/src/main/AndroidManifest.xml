@@ -20,6 +20,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".QuizTestActivity" android:exported="false" />
+        <activity android:name=".QuizHistoryActivity" android:exported="false" />
         <service
             android:name=".QuizAccessibilityService"
             android:exported="true"

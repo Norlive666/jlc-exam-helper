@@ -70,7 +70,7 @@ final class QuizProtocol {
                 if (label.isEmpty() || !labels.add(label) || x < 0 || x > 1000 || y < 0 || y > 1000) {
                     throw new IllegalArgumentException("模型返回的选项或坐标无效");
                 }
-                options.add(new Option(label, x, y, raw.getBoolean("selected")));
+                options.add(new Option(label, raw.optString("text", ""), x, y, raw.getBoolean("selected")));
             }
             Set<String> answers = new HashSet<>();
             JSONArray rawAnswers = source.getJSONArray("answers");
@@ -83,20 +83,33 @@ final class QuizProtocol {
                     || (!type.equals("multiple") && answers.size() != 1)) {
                 throw new IllegalArgumentException("模型返回的题目结构不完整");
             }
-            result.add(new Question(type, options, answers));
+            result.add(new Question(text, type, options, answers));
         }
         return result;
     }
 
     static final class Question {
+        final String text;
         final String type;
         final List<Option> options;
         final Set<String> answers;
 
-        Question(String type, List<Option> options, Set<String> answers) {
+        Question(String text, String type, List<Option> options, Set<String> answers) {
+            this.text = text;
             this.type = type;
             this.options = options;
             this.answers = answers;
+        }
+
+        String summary() {
+            List<String> choices = new ArrayList<>();
+            List<String> correct = new ArrayList<>();
+            for (Option option : options) {
+                choices.add(option.label + ". " + option.text + (option.selected ? "（模型判定已选）" : ""));
+                if (answers.contains(option.label)) correct.add(option.label);
+            }
+            return "题干：" + text + "\n选项：" + String.join("；", choices)
+                + "\n模型答案：" + String.join("、", correct);
         }
 
         List<Tap> changes(int width, int height) {
@@ -107,7 +120,7 @@ final class QuizProtocol {
                     // Same 0..1000 screen coordinate convention as Operit's PhoneAgent.
                     int x = Math.min(width - 1, (int) (option.x / 1000.0 * width));
                     int y = Math.min(height - 1, (int) (option.y / 1000.0 * height));
-                    taps.add(new Tap(x, y));
+                    taps.add(new Tap(x, y, option.label, desired));
                 }
             }
             return taps;
@@ -125,12 +138,14 @@ final class QuizProtocol {
 
     private static final class Option {
         final String label;
+        final String text;
         final int x;
         final int y;
         final boolean selected;
 
-        Option(String label, int x, int y, boolean selected) {
+        Option(String label, String text, int x, int y, boolean selected) {
             this.label = label;
+            this.text = text;
             this.x = x;
             this.y = y;
             this.selected = selected;
@@ -140,7 +155,20 @@ final class QuizProtocol {
     static final class Tap {
         final int x;
         final int y;
+        final String label;
+        final boolean desired;
 
-        Tap(int x, int y) { this.x = x; this.y = y; }
+        Tap(int x, int y) { this(x, y, "", true); }
+
+        Tap(int x, int y, String label, boolean desired) {
+            this.x = x;
+            this.y = y;
+            this.label = label;
+            this.desired = desired;
+        }
+
+        String description() {
+            return "选项 " + label + " → " + (desired ? "选中" : "取消") + " @ " + x + "," + y;
+        }
     }
 }
