@@ -146,7 +146,7 @@ open class UIAccessibilityService : AccessibilityService() {
         private const val TAG = "UIAccessibilityService"
         var isServiceConnected = false
             private set
-        
+
         // Cache for the current activity name
         @Volatile
         var currentActivityName: String = ""
@@ -165,10 +165,10 @@ open class UIAccessibilityService : AccessibilityService() {
         Log.d(TAG, "服务已解绑，状态更新为 false")
         return super.onUnbind(intent)
     }
-    
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        
+
         // Listen for window state changes to detect activity changes
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val className = event.className?.toString()
@@ -178,7 +178,7 @@ open class UIAccessibilityService : AccessibilityService() {
             }
         }
     }
-    
+
     override fun onInterrupt() {
         isServiceConnected = false
         currentActivityName = ""
@@ -228,4 +228,3 @@ open class UIAccessibilityService : AccessibilityService() {
         node.recycle()
     }
 }
-

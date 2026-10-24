@@ -1,0 +1,14 @@
+Operit Quiz 0.2.0
+
+ImagePoolManager and image-pool paths:
+AAswordman/Operit, commit dbf71916fae9750cfdc9f9a774f5a0fee56633fb.
+GNU LGPL v3. See LGPL-3.0.txt and GPL-3.0.txt.
+
+UIAccessibilityService (modified and merged into this APK):
+AAswordman/OperitAccessbility, commit 1221cf08c40f48ee5dfa68d3fc2c5aacbbf01b6a.
+Upstream README declares Apache 2.0. See Apache-2.0.txt.
+Removed IPC and unrelated input/navigation actions; added local completion,
+bounded screenshot waits, cancellation, and selection-state XML attributes.
+
+Corresponding source, build scripts and complete provenance:
+https://github.com/Norlive666/jlc-exam-helper/tree/exam-helper/lite
