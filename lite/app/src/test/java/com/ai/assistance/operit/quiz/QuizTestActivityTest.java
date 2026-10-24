@@ -83,6 +83,20 @@ public class QuizTestActivityTest {
         assertEquals(0, activity.getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_SECURE);
     }
 
+    @Test public void settingsScreenRemainsProtectedAfterLeavingTestPage() {
+        QuizTestActivity activity = open();
+        activity.onWindowFocusChanged(true);
+        controller.pause();
+        ActivityController<MainActivity> settings = Robolectric.buildActivity(MainActivity.class).setup();
+        try {
+            assertFalse(QuizTestActivity.allowsOwnScreenCapture());
+            assertNotEquals(0, settings.get().getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_SECURE);
+        } finally {
+            settings.pause().stop().destroy();
+            controller.resume();
+        }
+    }
+
     private View find(QuizTestActivity activity, String text) {
         View match = find(activity.getWindow().getDecorView(), text);
         assertNotNull("Missing view: " + text, match);

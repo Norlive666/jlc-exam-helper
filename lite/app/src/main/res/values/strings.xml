@@ -3,13 +3,13 @@
     <string name="app_name">Operit 识题</string>
     <string name="accessibility_description">读取当前屏幕，将题目和选项发送至你配置的 DeepSeek API，并自动点击选项。任务在后台运行，可从通知栏关闭。支持安卓 11 及以上。</string>
     <string name="heading">Operit 识题</string>
-    <string name="intro">填写 DeepSeek API Key 并开启权限。以后打开应用即开始后台识题，手动切换题目即可继续。</string>
+    <string name="intro">临时测试版：填写 DeepSeek API Key 并开启权限，进入内置答题页测试自动识题。测试页可转到后台。</string>
     <string name="api_key_hint">DeepSeek API Key</string>
     <string name="api_caption">官方接口 · deepseek-flash</string>
-    <string name="data_notice">运行时屏幕截图与界面文字会发送至 DeepSeek。应用仅执行选项点击，不翻页、不交卷。截图不写入相册或文件。</string>
+    <string name="data_notice">运行时屏幕截图与界面文字会发送至 DeepSeek。应用仅执行选项点击，不翻页、不交卷。截图在应用私有缓存中短暂处理后删除，不写入相册。</string>
     <string name="permissions">开启无障碍服务</string>
     <string name="notifications">允许通知</string>
-    <string name="start">保存并后台运行</string>
+    <string name="start">保存并进入测试页</string>
     <string name="stop">关闭识题</string>
     <string name="permission_needed">请先开启本应用的无障碍服务与通知权限。</string>
     <string name="key_needed">请填写 DeepSeek API Key。</string>
@@ -23,4 +23,18 @@
     <string name="notification_channel">后台识题状态</string>
     <string name="error_prefix">识题暂停：%1$s</string>
     <string name="settings_error">无法保存 API Key：%1$s</string>
+    <string name="test_heading">临时答题测试</string>
+    <string name="test_intro">等待自动选择后，手动核对并切换下一题。下拉通知栏可关闭识题。</string>
+    <string name="test_progress">第 %1$d / %2$d 题 · %3$s</string>
+    <string name="test_check">核对本题</string>
+    <string name="test_reset">重做本题</string>
+    <string name="test_next">下一题</string>
+    <string name="test_start">开始识题</string>
+    <string name="test_settings">配置</string>
+    <string name="test_background">转到后台</string>
+    <string name="test_correct">回答正确。</string>
+    <string name="test_incorrect">回答错误，请重做本题。</string>
+    <string name="test_status">共三题，循环测试。关闭识题后可点“开始识题”重新启动。</string>
+    <string name="test_configure_first">请先进入“配置”保存 Key，并开启无障碍服务和通知。</string>
+    <string name="test_started">已启动识题，请等待自动选择。</string>
 </resources>

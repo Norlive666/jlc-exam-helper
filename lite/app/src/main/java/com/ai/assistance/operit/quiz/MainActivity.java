@@ -34,6 +34,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         settings = new AgentSettings(this);
+        editing = getIntent().getBooleanExtra("edit_settings", false);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         getWindow().setDecorFitsSystemWindows(false);
 
@@ -148,7 +149,7 @@ public final class MainActivity extends Activity {
         try {
             service.startAgent();
             status.setText(R.string.running);
-            moveTaskToBack(true);
+            startActivity(new Intent(this, QuizTestActivity.class));
         } catch (Exception error) {
             status.setText(getString(R.string.error_prefix, error.getClass().getSimpleName()));
         }

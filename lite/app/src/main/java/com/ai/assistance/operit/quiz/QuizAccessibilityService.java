@@ -165,7 +165,8 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         if (root == null) return null;
         try {
             CharSequence packageName = root.getPackageName();
-            if (packageName == null || packageName.toString().equals(getPackageName())) return null;
+            if (packageName == null || (packageName.toString().equals(getPackageName())
+                    && !QuizTestActivity.allowsOwnScreenCapture())) return null;
             Rect bounds = new Rect();
             root.getBoundsInScreen(bounds);
             String xml = captureUiHierarchyAsXml();
