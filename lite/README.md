@@ -54,6 +54,6 @@ APK 路径：`lite/app/build/outputs/apk/debug/app-debug.apk`。
 
 已提供 19 个 JVM 回归场景，覆盖请求格式、点击坐标、多选状态、重复题目、过期回答、同屏多题与手动改变选择、自动换题和停止后不点击。
 
-当前只完成源码审查、XML 格式与资源引用静态检查。JVM 测试尚未执行，APK 尚未构建，真实 API 请求与手机运行尚未验证。
+2026-10-24 已在 [GitHub Actions](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40080244501) 完成提交 `120fd43` 的构建：19 个 JVM 测试全部通过，Debug APK 已生成并上传。真实 API 请求与手机运行尚未验证。
 
 许可证与改写来源见 [UPSTREAM.md](UPSTREAM.md)。
