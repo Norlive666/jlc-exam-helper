@@ -131,12 +131,12 @@ open class UIAccessibilityService : AccessibilityService() {
             try {
                 if (!latch.await(5, java.util.concurrent.TimeUnit.SECONDS)) {
                     accepting.set(false)
-                    resultValue = false
+                    return false
                 }
             } catch (_: InterruptedException) {
                 accepting.set(false)
                 Thread.currentThread().interrupt()
-                resultValue = false
+                return false
             }
         }
         return resultValue
