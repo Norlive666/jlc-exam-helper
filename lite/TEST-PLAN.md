@@ -12,4 +12,4 @@
 2. 实现测试 Activity、启动入口与服务读取例外；验证单选核对、多选完整性、判断、重做/换题、焦点/生命周期屏幕保护和设置页安全标志。
 3. 保留现有 23 项测试，在 exam-helper 分支构建 0.2.1-test（versionCode 3），下载核对 APK 与报告。
 
-移除时删除 QuizTestActivity 与对应测试、移除 Manifest 注册、将 MainActivity 成功启动后的跳转恢复为 moveTaskToBack(true)，并恢复自应用屏幕一律跳过。其他识题模块不改。
+移除时删除 QuizTestActivity 与对应测试、移除 Manifest 注册、将 MainActivity 成功启动后的跳转恢复为 moveTaskToBack(true)，移除 MainActivity 的 edit_settings 临时入口，恢复启动按钮文案，并恢复自应用屏幕一律跳过。其他识题模块不改。
