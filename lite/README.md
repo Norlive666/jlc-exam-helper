@@ -20,6 +20,8 @@
 
 Android 11 / API 30 或以上，无需 Root、Shizuku 或电脑控制。
 
+本次 0.2.0 与之前 0.1.0 的调试签名不同，已安装旧识题版时需要先卸载，再安装新版，并重新填写 Key、完成系统授权。
+
 1. 安装精简版 APK，打开“Operit 识题”。它与原版 Operit 的应用 ID 不同，可以共存。
 2. 输入 DeepSeek API Key，点击“保存并后台运行”。尚未授权时会在页面内显示提示。
 3. 点击“允许通知”完成系统授权；点击“开启无障碍服务”并在系统设置中启用本应用。
@@ -56,6 +58,10 @@ APK 路径：`lite/app/build/outputs/apk/debug/app-debug.apk`。
 
 已提供 21 个 JVM 行为回归场景，覆盖请求格式、点击坐标、多选状态、重复题目、过期回答、同屏多题与手动改变选择、自动换题、停止后不点击，以及原版 XML 的选中状态归一化。另有 2 个 Robolectric 原生位图场景，验证真实 JPEG 编码、缩放与每帧图片清理。
 
-0.2.0 的 GitHub 构建结果待确认。CI 同时检查 APK 中包含实际编译的 UIAccessibilityService、ImagePoolManager 与 OperitScreenshot；真实 API 请求与手机运行尚未验证。
+2026-10-24 已在 [GitHub Actions](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40092783670) 完成提交 `ce2890b` 的构建，23 项测试全部通过。Debug APK 为 **2,594,168 字节（约 2.47 MiB）**，已下载核验 ZIP 完整性、0.2.0 版本号、原版模块和包内许可证。
+
+SHA-256：`31d45cb9eb1212ae19cbfd12053a2f9149c4fc8bec23d4a6bd3018483780bb85`。
+
+[下载本次 APK 产物](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40092783670/artifacts/12560105667)，解压后安装其中的 APK。CI 同时检查实际编译的 UIAccessibilityService、ImagePoolManager 与 OperitScreenshot。真实 API 请求与手机运行尚未验证。
 
 许可证与改写来源见 [UPSTREAM.md](UPSTREAM.md)。
