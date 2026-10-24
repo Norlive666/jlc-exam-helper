@@ -3,6 +3,12 @@ package com.ai.assistance.operit.quiz;
 import java.util.List;
 
 final class ScreenFrame {
+    static String normalizeUiText(String xml) {
+        return xml.replaceAll("\\b\\d{1,2}:\\d{2}(?::\\d{2})?\\b", "")
+            .replaceAll(" (?:checked|selected|focused)=\"[^\"]*\"", "")
+            .replaceAll("(?i)[,，\\s]+(?:已选中|未选中|not selected|selected|unchecked|checked)(?=\")", "");
+    }
+
     final byte[] jpeg;
     final int width;
     final int height;

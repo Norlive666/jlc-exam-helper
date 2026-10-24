@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "OperitQuizLite"
 include(":app")
+include(":operit-core")

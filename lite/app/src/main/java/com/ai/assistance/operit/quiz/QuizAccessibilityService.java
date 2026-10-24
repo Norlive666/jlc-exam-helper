@@ -1,7 +1,6 @@
 package com.ai.assistance.operit.quiz;
 
-import android.accessibilityservice.AccessibilityService;
-import android.accessibilityservice.GestureDescription;
+import com.ai.assistance.operit.provider.UIAccessibilityService;
 import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -10,19 +9,16 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.Path;
 import android.graphics.Rect;
-import android.hardware.HardwareBuffer;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.os.SystemClock;
 import android.util.Log;
-import android.view.Display;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import java.io.ByteArrayOutputStream;
+import android.graphics.BitmapFactory;
+import java.io.File;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,7 +26,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class QuizAccessibilityService extends AccessibilityService {
+public final class QuizAccessibilityService extends UIAccessibilityService {
     static final int NOTIFICATION_ID = 6101;
     private static final String CHANNEL = "quiz_agent_status";
     private static volatile QuizAccessibilityService instance;
@@ -41,11 +37,10 @@ public final class QuizAccessibilityService extends AccessibilityService {
     private DeepSeekClient client;
     private Future<?> task;
     private volatile boolean running;
-    private long lastScreenshotRequestedAt;
 
     static QuizAccessibilityService current() { return instance; }
 
-    @Override protected void onServiceConnected() {
+    @Override public void onServiceConnected() {
         super.onServiceConnected();
         settings = new AgentSettings(this);
         instance = this;
@@ -121,10 +116,10 @@ public final class QuizAccessibilityService extends AccessibilityService {
     }
 
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {
-        // A single serial polling loop handles both native views and canvas/WebView content.
+        super.onAccessibilityEvent(event);
     }
 
-    @Override public void onInterrupt() { stopAgent(); }
+    @Override public void onInterrupt() { stopAgent(); super.onInterrupt(); }
 
     @Override public void onDestroy() {
         stopAgent();
@@ -173,42 +168,31 @@ public final class QuizAccessibilityService extends AccessibilityService {
             if (packageName == null || packageName.toString().equals(getPackageName())) return null;
             Rect bounds = new Rect();
             root.getBoundsInScreen(bounds);
-            StringBuilder text = new StringBuilder();
+            String xml = captureUiHierarchyAsXml();
+            if (xml.isEmpty()) return null;
+            String text = ScreenFrame.normalizeUiText(xml);
             StringBuilder selection = new StringBuilder();
-            readNodes(root, text, selection, new int[]{0});
+            readSelection(root, selection, new int[]{0});
             int rotation = getSystemService(WindowManager.class).getDefaultDisplay().getRotation();
             return new WindowState(packageName.toString(), root.getWindowId(), rotation,
-                bounds, text.toString(), selection.toString());
+                bounds, text, selection.toString());
         } finally {
             root.recycle();
         }
     }
 
-    private void readNodes(AccessibilityNodeInfo node, StringBuilder text, StringBuilder selection, int[] count) {
-        if (++count[0] > 1200 || text.length() > 16000 || !node.isVisibleToUser()) return;
+    private void readSelection(AccessibilityNodeInfo node, StringBuilder selection, int[] count) {
+        if (++count[0] > 1200 || !node.isVisibleToUser()) return;
         if (node.isCheckable() || node.isClickable() || node.isSelected()) {
             Rect bounds = new Rect();
             node.getBoundsInScreen(bounds);
             selection.append(bounds.toShortString()).append(':')
                 .append(node.isChecked()).append(':').append(node.isSelected()).append('\n');
         }
-        CharSequence value = node.getText();
-        if (value == null || value.length() == 0) value = node.getContentDescription();
-        if (value != null && value.length() > 0) {
-            String normalized = value.toString()
-                .replaceAll("\\b\\d{1,2}:\\d{2}(?::\\d{2})?\\b", "")
-                .replaceAll("(?i)[,，\\s]+(?:已选中|未选中|not selected|selected|unchecked|checked)$", "")
-                .trim();
-            if (!normalized.isEmpty()) {
-                Rect bounds = new Rect();
-                node.getBoundsInScreen(bounds);
-                text.append(normalized).append(" @").append(bounds.toShortString()).append('\n');
-            }
-        }
         for (int i = 0; i < node.getChildCount(); i++) {
             AccessibilityNodeInfo child = node.getChild(i);
             if (child == null) continue;
-            try { readNodes(child, text, selection, count); }
+            try { readSelection(child, selection, count); }
             finally { child.recycle(); }
         }
     }
@@ -220,77 +204,46 @@ public final class QuizAccessibilityService extends AccessibilityService {
         PhoneScreen(long token) { this.token = token; }
 
         @Override public ScreenFrame capture() throws Exception {
-            CompletableFuture<ScreenFrame> result = new CompletableFuture<>();
-            main.post(() -> captureOnMain(result));
-            try {
-                ScreenFrame frame = result.get(5, TimeUnit.SECONDS);
-                lastCaptured = frame;
-                return frame;
-            } catch (Exception error) {
-                result.cancel(false);
-                throw error;
-            }
-        }
-
-        private void captureOnMain(CompletableFuture<ScreenFrame> result) {
-            try {
-                requestCapture(result);
-            } catch (RuntimeException error) {
-                result.completeExceptionally(error);
-            }
-        }
-
-        private void requestCapture(CompletableFuture<ScreenFrame> result) {
-            if (!active(token) || result.isDone()) { result.complete(null); return; }
-            if (!notificationAvailable()) {
-                stopAgent();
-                result.complete(null);
-                return;
-            }
-            // Android rate-limits accessibility screenshots, including pre-click rechecks.
-            long wait = 400 - (SystemClock.uptimeMillis() - lastScreenshotRequestedAt);
-            if (wait > 0) {
-                main.postDelayed(() -> captureOnMain(result), wait);
-                return;
-            }
-            if (!getSystemService(PowerManager.class).isInteractive()
-                    || getSystemService(KeyguardManager.class).isKeyguardLocked()) {
-                QuizAccessibilityService.this.status(token, R.string.idle_screen);
-                result.complete(null);
-                return;
-            }
-            WindowState before = windowState();
-            if (before == null) { result.complete(null); return; }
-            lastScreenshotRequestedAt = SystemClock.uptimeMillis();
-            takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
-                @Override public void onSuccess(ScreenshotResult screenshot) {
-                    HardwareBuffer buffer = screenshot.getHardwareBuffer();
-                    Bitmap hardware = null;
-                    Bitmap software = null;
-                    try {
-                        if (!active(token) || result.isDone() || !before.matches(windowState())) {
-                            result.complete(null);
-                            return;
-                        }
-                        hardware = Bitmap.wrapHardwareBuffer(buffer, screenshot.getColorSpace());
-                        if (hardware == null) throw new IllegalStateException("截图无法解码");
-                        software = hardware.copy(Bitmap.Config.ARGB_8888, false);
-                        if (software == null) throw new IllegalStateException("截图无法读取");
-                        result.complete(encodeFrame(software, before));
-                    } catch (Exception error) {
-                        result.completeExceptionally(error);
-                    } finally {
-                        if (software != null) software.recycle();
-                        if (hardware != null) hardware.recycle();
-                        buffer.close();
+            CompletableFuture<WindowState> snapshot = new CompletableFuture<>();
+            main.post(() -> {
+                try {
+                    if (!active(token) || !notificationAvailable()
+                            || !getSystemService(PowerManager.class).isInteractive()
+                            || getSystemService(KeyguardManager.class).isKeyguardLocked()) {
+                        snapshot.complete(null);
+                    } else {
+                        snapshot.complete(windowState());
                     }
-                }
-
-                @Override public void onFailure(int errorCode) {
-                    QuizAccessibilityService.this.status(token, R.string.unavailable_screen);
-                    result.complete(null);
+                } catch (RuntimeException error) {
+                    snapshot.completeExceptionally(error);
                 }
             });
+            WindowState before = snapshot.get(5, TimeUnit.SECONDS);
+            if (before == null || !active(token)) return null;
+            File file = File.createTempFile("operit-screen-", ".png", getCacheDir());
+            Bitmap bitmap = null;
+            try {
+                // Operit's provider owns screenshot rate-limiting and HardwareBuffer lifetime.
+                if (!captureScreenshot(file.getAbsolutePath(), "png") || !active(token)) return null;
+                bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+                if (bitmap == null) throw new IllegalStateException("截图无法解码");
+                ScreenFrame frame = encodeFrame(bitmap, before);
+                CompletableFuture<Boolean> unchanged = new CompletableFuture<>();
+                main.post(() -> {
+                    try {
+                        unchanged.complete(active(token) && notificationAvailable()
+                            && before.matches(windowState()));
+                    } catch (RuntimeException error) {
+                        unchanged.completeExceptionally(error);
+                    }
+                });
+                if (!unchanged.get(5, TimeUnit.SECONDS)) return null;
+                lastCaptured = frame;
+                return frame;
+            } finally {
+                if (bitmap != null) bitmap.recycle();
+                file.delete();
+            }
         }
 
         @Override public boolean tap(QuizProtocol.Tap tap) throws Exception {
@@ -307,15 +260,10 @@ public final class QuizAccessibilityService extends AccessibilityService {
                         result.complete(false);
                         return;
                     }
-                    Path path = new Path();
-                    path.moveTo(tap.x, tap.y);
-                    GestureDescription gesture = new GestureDescription.Builder()
-                        .addStroke(new GestureDescription.StrokeDescription(path, 0, 80)).build();
-                    boolean accepted = dispatchGesture(gesture, new GestureResultCallback() {
-                        @Override public void onCompleted(GestureDescription description) { result.complete(true); }
-                        @Override public void onCancelled(GestureDescription description) { result.complete(false); }
-                    }, main);
-                    if (!accepted) result.complete(false);
+                    performClick(tap.x, tap.y, completed -> {
+                        result.complete(completed);
+                        return kotlin.Unit.INSTANCE;
+                    });
                 } catch (RuntimeException error) {
                     result.completeExceptionally(error);
                 }
@@ -346,17 +294,7 @@ public final class QuizAccessibilityService extends AccessibilityService {
     private ScreenFrame encodeFrame(Bitmap bitmap, WindowState window) {
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
-        double scale = Math.min(1.0, 1600.0 / Math.max(width, height));
-        Bitmap image = Bitmap.createScaledBitmap(bitmap,
-            Math.max(1, (int) (width * scale)), Math.max(1, (int) (height * scale)), true);
-        ByteArrayOutputStream jpeg = new ByteArrayOutputStream();
-        try {
-            if (!image.compress(Bitmap.CompressFormat.JPEG, 85, jpeg)) {
-                throw new IllegalStateException("截图压缩失败");
-            }
-        } finally {
-            if (image != bitmap) image.recycle();
-        }
+        byte[] jpeg = OperitScreenshot.encode(bitmap);
         Rect area = new Rect(window.bounds);
         if (!area.intersect(0, 0, width, height)) {
             throw new IllegalStateException("当前窗口没有可读取区域");
@@ -384,7 +322,7 @@ public final class QuizAccessibilityService extends AccessibilityService {
         } finally {
             if (selectionSample != bitmap) selectionSample.recycle();
         }
-        return new ScreenFrame(jpeg.toByteArray(), width, height, window.app,
+        return new ScreenFrame(jpeg, width, height, window.app,
             window.id, window.rotation, window.text, window.selection, hash, pixels);
     }
 

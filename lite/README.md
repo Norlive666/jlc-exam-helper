@@ -1,6 +1,8 @@
 # Operit 识题精简版
 
-安卓手机独立运行的功能原型，仅接入 DeepSeek 官方 API。打开后后台读取当前屏幕，识别可见的选择题、判断题并选择答案，通过通知栏关闭。
+复用 Operit 原版识屏执行模块的安卓独立应用（0.2.0），仅接入 DeepSeek 官方 API。打开后后台读取当前屏幕，识别可见的选择题、判断题并选择答案，通过通知栏关闭。
+
+识屏与点击来自原作者的 OperitAccessbility 服务；图片归一化、缩放与编码使用 Operit 的 ImagePoolManager，合并为一个 APK。具体来源和删改范围见 [UPSTREAM.md](UPSTREAM.md)。
 
 ## 当前功能
 
@@ -28,7 +30,7 @@ Android 的无障碍授权、通知授权以及部分手机的后台管理提示
 
 ## 数据与使用范围
 
-运行时，当前屏幕的 JPEG 截图和可读取的界面文字由手机直接发送至 `https://api.deepseek.com/chat/completions`。API Key 使用 Android Keystore 加密保存。截图只在内存中处理，不保存到相册或磁盘。
+运行时，当前屏幕的 JPEG 截图和可读取的界面文字由手机直接发送至 `https://api.deepseek.com/chat/completions`。API Key 使用 Android Keystore 加密保存。截图经 Operit 原版截图流程短暂写入应用私有缓存，处理后删除，不写入相册。图片池不启用磁盘持久化。
 
 屏幕每轮间隔约三秒检查一次，模型请求和点击串行执行。相同界面会跳过重复请求。受保护的页面可能无法截图；模型定位和答题也可能出错，当前版本尚无真机成功率数据。
 
@@ -52,8 +54,8 @@ APK 路径：`lite/app/build/outputs/apk/debug/app-debug.apk`。
 
 ## 验证状态
 
-已提供 19 个 JVM 回归场景，覆盖请求格式、点击坐标、多选状态、重复题目、过期回答、同屏多题与手动改变选择、自动换题和停止后不点击。
+已提供 21 个 JVM 行为回归场景，覆盖请求格式、点击坐标、多选状态、重复题目、过期回答、同屏多题与手动改变选择、自动换题、停止后不点击，以及原版 XML 的选中状态归一化。另有 2 个 Robolectric 原生位图场景，验证真实 JPEG 编码、缩放与每帧图片清理。
 
-2026-10-24 已在 [GitHub Actions](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40080244501) 完成提交 `120fd43` 的构建：19 个 JVM 测试全部通过，Debug APK 已生成并上传。真实 API 请求与手机运行尚未验证。
+0.2.0 的 GitHub 构建结果待确认。CI 同时检查 APK 中包含实际编译的 UIAccessibilityService、ImagePoolManager 与 OperitScreenshot；真实 API 请求与手机运行尚未验证。
 
 许可证与改写来源见 [UPSTREAM.md](UPSTREAM.md)。
