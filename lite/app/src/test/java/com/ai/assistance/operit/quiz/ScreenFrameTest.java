@@ -4,6 +4,14 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ScreenFrameTest {
+    @Test public void nativeSelectionUsesTheSmallestCheckableNodeAtTheTarget() {
+        ScreenFrame frame = new ScreenFrame(new byte[]{1}, 1080, 2400, "practice", 7, 0,
+            "question", "[0,0][1080,2400]:false:false:false\n[0,100][600,200]:true:true:false\n",
+            new long[4], new int[64 * 128]);
+        assertEquals(Boolean.TRUE, frame.selectedAt(new QuizProtocol.Tap(100, 150)));
+        assertNull(frame.selectedAt(new QuizProtocol.Tap(800, 150)));
+    }
+
     @Test public void selectionAnnouncementsDoNotChangeQuestionIdentity() {
         String before = "<node text=\"A，未选中\" content-desc=\"A, unchecked\" checked=\"false\" selected=\"false\" focused=\"false\" />";
         String after = "<node text=\"A，已选中\" content-desc=\"A, checked\" checked=\"true\" selected=\"true\" focused=\"true\" />";

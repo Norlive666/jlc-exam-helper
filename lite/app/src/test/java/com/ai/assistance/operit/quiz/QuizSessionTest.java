@@ -23,9 +23,43 @@ public class QuizSessionTest {
     private static class Phone implements QuizSession.Screen {
         ScreenFrame frame = frame("practice", "2+2 A3 B4");
         final List<QuizProtocol.Tap> taps = new ArrayList<>();
+        final List<String> events = new ArrayList<>();
         @Override public ScreenFrame capture() { return frame; }
         @Override public boolean tap(QuizProtocol.Tap tap) { taps.add(tap); return true; }
         @Override public void status(QuizSession.Status status) {}
+        @Override public void trace(String stage, String detail) { events.add(stage + ": " + detail); }
+    }
+
+    @Test public void historySeparatesRecognizedQuestionFromUnchangedClickTarget() throws Exception {
+        Phone phone = new Phone();
+        new QuizSession(phone, original -> QuizProtocol.parse(REPLY)).scan(() -> true);
+        String events = String.join("\n", phone.events);
+        assertTrue(events.contains("2+2等于多少？"));
+        assertTrue(events.contains("模型答案：B"));
+        assertTrue(events.contains("手势已完成"));
+        assertTrue(events.contains("未观察到变化"));
+        assertFalse(events.contains("已确认选中"));
+    }
+
+    @Test public void emptyReplyIsRecordedAsNoQuestionInsteadOfClickSuccess() throws Exception {
+        Phone phone = new Phone();
+        new QuizSession(phone, original -> List.of()).scan(() -> true);
+        assertTrue(String.join("\n", phone.events).contains("未识别到题目"));
+        assertTrue(phone.taps.isEmpty());
+    }
+
+    @Test public void completedNativeSelectionIsExplicitlyConfirmed() throws Exception {
+        Phone phone = new Phone() {
+            @Override public boolean tap(QuizProtocol.Tap tap) {
+                super.tap(tap);
+                frame = new ScreenFrame(new byte[]{1}, 1080, 2400, "practice", 7, 0,
+                    "2+2 A3 B4", "[0,1000][800,1200]:true:true:false\n",
+                    new long[4], new int[64 * 128]);
+                return true;
+            }
+        };
+        new QuizSession(phone, original -> QuizProtocol.parse(REPLY)).scan(() -> true);
+        assertTrue(String.join("\n", phone.events).contains("已确认选中"));
     }
 
     @Test public void repeatedScreenDoesNotRequestOrClickAgain() throws Exception {
