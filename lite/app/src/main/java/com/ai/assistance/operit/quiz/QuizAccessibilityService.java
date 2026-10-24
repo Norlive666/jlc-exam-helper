@@ -255,7 +255,7 @@ public final class QuizAccessibilityService extends AccessibilityService {
             }
             if (!getSystemService(PowerManager.class).isInteractive()
                     || getSystemService(KeyguardManager.class).isKeyguardLocked()) {
-                status(token, R.string.idle_screen);
+                QuizAccessibilityService.this.status(token, R.string.idle_screen);
                 result.complete(null);
                 return;
             }
@@ -287,7 +287,7 @@ public final class QuizAccessibilityService extends AccessibilityService {
                 }
 
                 @Override public void onFailure(int errorCode) {
-                    status(token, R.string.unavailable_screen);
+                    QuizAccessibilityService.this.status(token, R.string.unavailable_screen);
                     result.complete(null);
                 }
             });
