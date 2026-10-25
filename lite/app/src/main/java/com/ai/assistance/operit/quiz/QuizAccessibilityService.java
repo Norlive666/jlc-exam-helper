@@ -53,10 +53,7 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         channel.enableVibration(false);
         channel.setShowBadge(false);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
-        if (settings.isRunning()) {
-            try { startAgent(); }
-            catch (Exception error) { showError(error); }
-        }
+        if (!running) settings.setRunning(false);
     }
 
     void startAgent() throws Exception {

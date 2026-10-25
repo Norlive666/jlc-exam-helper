@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,8 +45,12 @@ public class MainActivityTest {
     }
 
     private MainActivity open(boolean enabled, boolean notifications, boolean launcher) {
+        return open(enabled, notifications, launcher, null);
+    }
+
+    private MainActivity open(boolean enabled, boolean notifications, boolean launcher, Bundle state) {
         Intent intent = launcher ? launcherIntent() : new Intent();
-        controller = Robolectric.buildActivity(MainActivity.class, intent).create();
+        controller = Robolectric.buildActivity(MainActivity.class, intent).create(state);
         MainActivity activity = controller.get();
         // The connection checks do not need to decrypt or send an API key.
         activity.getSharedPreferences("quiz_agent", Context.MODE_PRIVATE).edit()
@@ -139,6 +144,14 @@ public class MainActivityTest {
             new ComponentName(activity, QuizAccessibilityService.class).flattenToString());
         connectService(activity);
         controller.resume();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertFalse(new AgentSettings(activity).isRunning());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    @Test public void restoringConfigurationDoesNotReplayOldLauncherClick() {
+        MainActivity activity = open(true, true, true, new Bundle());
+        connectService(activity);
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
         assertFalse(new AgentSettings(activity).isRunning());
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());

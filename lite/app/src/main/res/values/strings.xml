@@ -3,7 +3,7 @@
     <string name="app_name">Operit 识题</string>
     <string name="accessibility_description">读取当前屏幕，将题目和选项发送至你配置的 DeepSeek API，并自动点击选项。任务在后台运行，可从通知栏关闭。支持安卓 11 及以上。</string>
     <string name="heading">Operit 识题</string>
-    <string name="intro">临时测试版：填写 DeepSeek API Key 并开启权限，进入内置答题页测试自动识题。测试页可转到后台。</string>
+    <string name="intro">临时测试版：填写 DeepSeek API Key 并开启权限后，点击桌面图标或下方按钮开始识题。开启权限本身不会启动识题，测试页可转到后台。</string>
     <string name="api_key_hint">DeepSeek API Key</string>
     <string name="api_caption">官方接口 · deepseek-flash</string>
     <string name="data_notice">运行时屏幕截图与界面文字会发送至 DeepSeek。应用仅执行选项点击，不翻页、不交卷。截图在应用私有缓存中短暂处理后删除，不写入相册。</string>
@@ -15,6 +15,7 @@
     <string name="accessibility_needed">请先开启本应用的无障碍服务。</string>
     <string name="notification_needed">请先允许本应用发送通知。</string>
     <string name="accessibility_connecting">无障碍已开启，正在等待系统连接服务…</string>
+    <string name="ready">权限已就绪，点击桌面图标或“保存并进入测试页”开始识题。</string>
     <string name="key_needed">请填写 DeepSeek API Key。</string>
     <string name="running">正在后台识题</string>
     <string name="waiting">等待题目出现</string>

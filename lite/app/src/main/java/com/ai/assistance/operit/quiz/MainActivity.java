@@ -31,12 +31,14 @@ public final class MainActivity extends Activity {
     private TextView status;
     private boolean editing;
     private boolean resumed;
+    private boolean startRequested;
     private final Runnable automaticStart = this::startIfReady;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         settings = new AgentSettings(this);
         editing = getIntent().getBooleanExtra("edit_settings", false);
+        startRequested = state == null && !editing && isLauncherIntent(getIntent());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         getWindow().setDecorFitsSystemWindows(false);
 
@@ -74,6 +76,7 @@ public final class MainActivity extends Activity {
         key.setOnFocusChangeListener((view, focused) -> {
             if (focused) {
                 editing = true;
+                startRequested = false;
                 handler.removeCallbacks(automaticStart);
             }
         });
@@ -84,6 +87,7 @@ public final class MainActivity extends Activity {
         Button accessibility = button(R.string.permissions);
         accessibility.setOnClickListener(view -> {
             editing = false;
+            startRequested = false;
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         });
         content.addView(accessibility, spaced());
@@ -91,6 +95,7 @@ public final class MainActivity extends Activity {
         Button notifications = button(R.string.notifications);
         notifications.setOnClickListener(view -> {
             editing = false;
+            startRequested = false;
             if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
@@ -108,6 +113,7 @@ public final class MainActivity extends Activity {
             try {
                 settings.saveApiKey(apiKey);
                 editing = false;
+                startRequested = true;
                 QuizAccessibilityService service = QuizAccessibilityService.current();
                 if (service != null) service.stopAgent();
                 startIfReady();
@@ -122,6 +128,18 @@ public final class MainActivity extends Activity {
         content.requestFocus();
     }
 
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        editing = intent.getBooleanExtra("edit_settings", false);
+        startRequested = !editing && isLauncherIntent(intent);
+    }
+
+    private boolean isLauncherIntent(Intent intent) {
+        return Intent.ACTION_MAIN.equals(intent.getAction())
+            && intent.hasCategory(Intent.CATEGORY_LAUNCHER);
+    }
+
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
@@ -131,6 +149,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onPause() {
         resumed = false;
+        startRequested = false;
         handler.removeCallbacks(automaticStart);
         super.onPause();
     }
@@ -157,8 +176,13 @@ public final class MainActivity extends Activity {
             handler.postDelayed(automaticStart, 500);
             return;
         }
+        if (!startRequested) {
+            status.setText(settings.isRunning() ? R.string.running : R.string.ready);
+            return;
+        }
         try {
             service.startAgent();
+            startRequested = false;
             status.setText(R.string.running);
             startActivity(new Intent(this, QuizTestActivity.class));
         } catch (Exception error) {
