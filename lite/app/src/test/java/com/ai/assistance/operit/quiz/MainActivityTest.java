@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.android.controller.ServiceController;
@@ -39,7 +40,12 @@ public class MainActivityTest {
     }
 
     private MainActivity open(boolean enabled, boolean notifications) {
-        controller = Robolectric.buildActivity(MainActivity.class).create();
+        return open(enabled, notifications, true);
+    }
+
+    private MainActivity open(boolean enabled, boolean notifications, boolean launcher) {
+        Intent intent = launcher ? launcherIntent() : new Intent();
+        controller = Robolectric.buildActivity(MainActivity.class, intent).create();
         MainActivity activity = controller.get();
         // The connection checks do not need to decrypt or send an API key.
         activity.getSharedPreferences("quiz_agent", Context.MODE_PRIVATE).edit()
@@ -95,16 +101,17 @@ public class MainActivityTest {
 
     @Test public void lateConnectionEntersTestPageOnlyOnce() {
         MainActivity activity = open(true, true);
-        // Keep capture idle: this test verifies startup, not screenshots or HTTP.
-        Shadows.shadowOf(activity.getSystemService(PowerManager.class)).setIsInteractive(false);
-        service = Robolectric.buildService(QuizAccessibilityService.class).create();
-        service.get().onServiceConnected();
+        connectService(activity);
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
         Intent opened = Shadows.shadowOf(activity).getNextStartedActivity();
         assertNotNull(opened);
         assertEquals(new ComponentName(activity, QuizTestActivity.class), opened.getComponent());
         assertTrue(new AgentSettings(activity).isRunning());
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+        controller.pause().resume();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertTrue(new AgentSettings(activity).isRunning());
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
     }
 
@@ -115,6 +122,63 @@ public class MainActivityTest {
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         assertTrue(hasText(activity.getWindow().getDecorView(), "无障碍已开启，正在等待系统连接服务…"));
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    @Test public void openingConfigurationWithoutLauncherClickDoesNotStartRecognition() {
+        MainActivity activity = open(true, true, false);
+        connectService(activity);
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertFalse(new AgentSettings(activity).isRunning());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    @Test public void enablingPermissionAndReturningDoesNotStartRecognition() {
+        MainActivity activity = open(false, true);
+        controller.pause();
+        Settings.Secure.putString(activity.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            new ComponentName(activity, QuizAccessibilityService.class).flattenToString());
+        connectService(activity);
+        controller.resume();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertFalse(new AgentSettings(activity).isRunning());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    @Test public void serviceConnectionDoesNotRestoreStaleRunningFlag() {
+        Context context = RuntimeEnvironment.getApplication();
+        context.getSharedPreferences("quiz_agent", Context.MODE_PRIVATE).edit()
+            .putString("api_key", "unused-in-connection-tests").apply();
+        AgentSettings settings = new AgentSettings(context);
+        settings.setRunning(true);
+        connectService(context);
+        assertFalse(settings.isRunning());
+        assertEquals(0, Shadows.shadowOf(context.getSystemService(NotificationManager.class))
+            .getAllNotifications().size());
+    }
+
+    @Test public void tappingLauncherIconStartsExistingConfigurationActivity() {
+        MainActivity activity = open(true, true, false);
+        connectService(activity);
+        controller.pause();
+        controller.newIntent(launcherIntent());
+        controller.resume();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertTrue(new AgentSettings(activity).isRunning());
+        Intent opened = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertNotNull(opened);
+        assertEquals(new ComponentName(activity, QuizTestActivity.class), opened.getComponent());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    private Intent launcherIntent() {
+        return new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+    }
+
+    private void connectService(Context context) {
+        // Keep capture idle: these tests verify startup, not screenshots or HTTP.
+        Shadows.shadowOf(context.getSystemService(PowerManager.class)).setIsInteractive(false);
+        service = Robolectric.buildService(QuizAccessibilityService.class).create();
+        service.get().onServiceConnected();
     }
 
     private EditText findKey(View view) {
