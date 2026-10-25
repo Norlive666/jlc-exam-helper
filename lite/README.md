@@ -130,12 +130,12 @@ APK 路径：`lite/app/build/outputs/apk/debug/app-debug.apk`。
 
 0.2.5-test 增加 7 项异常恢复回归场景，覆盖重新读取屏幕、连续失败延长间隔、成功后重置、等待或请求期间停止、中断退出及点击失败后不重放旧答案。
 
-2026-10-25，[GitHub Actions 构建](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40170620907) 已验证提交 `139fa54`：**55 项测试全部通过**。APK 为 **2,626,796 字节**，已下载核对 SHA-256、完整性、0.2.5-test / versionCode 7、桌面入口配置，以及识题/悬浮/历史/原 Operit 模块。
+2026-10-25，[GitHub Actions 构建](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40194031994) 已验证提交 `5a52c78`：**55 项测试全部通过**。APK 为 **2,626,796 字节**，已下载核对 SHA-256、完整性、0.2.6-test / versionCode 8、编译后的无障碍反馈类型 17（通用与语音反馈组合），以及识题/原 Operit 模块。
 
-[下载 0.2.5-test APK 产物](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40170620907/artifacts/12589228812)，解压后安装 APK。
+[下载 0.2.6-test APK 产物](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40194031994/artifacts/12599107454)，解压后安装 APK。
 
-SHA-256：`266394887ae097a31dcb7ef58bb38c8efd3cd47cdc7b0763b7eb0721a2cdb0c4`。
+SHA-256：`7487c81e22c357c0058e10a270943b4a728aae98cbdecc057bf7a168c2c7d034`。
 
-用户已反馈之前的测试版可以识别题目；本次 Redmi 真机的网络/点击异常重试、等待时关闭及后台运行行为仍需实测。测试和构建不能证明系统不会回收后台进程。
+用户已反馈之前的测试版可以识别题目；旧版清后台失去无障碍的原因已通过 Redmi 真机对照定位。0.2.6-test 清理后的动态保护名单、服务与授权开关是否保留，以及通知关闭后再清理的行为仍需真机复测。测试和构建不能证明系统不会回收后台进程。
 
 许可证与改写来源见 [UPSTREAM.md](UPSTREAM.md)。
