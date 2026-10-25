@@ -6,7 +6,7 @@ import java.util.function.BooleanSupplier;
 
 /** Serial screenshot -> answer -> option selection loop, with no navigation tools. */
 final class QuizSession {
-    enum Status { WAITING, ANALYZING, SELECTED, SCREEN_CHANGED }
+    enum Status { WAITING, ANALYZING, SELECTED, SCREEN_CHANGED, RETRYING }
 
     interface Screen {
         ScreenFrame capture() throws Exception;
@@ -34,9 +34,33 @@ final class QuizSession {
     }
 
     void run(BooleanSupplier active, Sleeper sleeper) throws Exception {
+        long retryDelay = 3000;
+        boolean retrying = false;
         while (active.getAsBoolean()) {
-            scan(active);
-            if (active.getAsBoolean()) sleeper.sleep(3000);
+            long delay = 3000;
+            if (retrying) {
+                screen.status(Status.WAITING);
+                screen.trace("开始重试", "重新读取当前屏幕，不继续执行旧答案");
+            }
+            try {
+                scan(active);
+                retryDelay = 3000;
+                retrying = false;
+            } catch (InterruptedException stopped) {
+                throw stopped;
+            } catch (Exception error) {
+                if (!active.getAsBoolean()) return;
+                previous = null;
+                previousOptions = List.of();
+                delay = retryDelay;
+                retryDelay = Math.min(30000, retryDelay * 2);
+                retrying = true;
+                String detail = error.getMessage();
+                if (detail == null || detail.isBlank()) detail = error.getClass().getSimpleName();
+                screen.status(Status.RETRYING);
+                screen.trace("等待自动重试", delay / 1000 + " 秒后重新识别：" + detail);
+            }
+            if (active.getAsBoolean()) sleeper.sleep(delay);
         }
     }
 

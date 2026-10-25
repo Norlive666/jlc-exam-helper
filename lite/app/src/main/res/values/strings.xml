@@ -20,6 +20,7 @@
     <string name="running">正在后台识题</string>
     <string name="waiting">等待题目出现</string>
     <string name="analyzing">正在识别题目</string>
+    <string name="retrying">识题遇到异常，等待自动重试；可从通知栏关闭</string>
     <string name="selected">点击流程已结束，等待下一题；选中状态可查看历史</string>
     <string name="screen_changed">页面已变化，重新识别</string>
     <string name="idle_screen">等待屏幕亮起并解锁</string>

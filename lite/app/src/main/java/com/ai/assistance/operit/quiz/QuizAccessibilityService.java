@@ -366,6 +366,7 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
                 case ANALYZING: resource = R.string.analyzing; break;
                 case SELECTED: resource = R.string.selected; break;
                 case SCREEN_CHANGED: resource = R.string.screen_changed; break;
+                case RETRYING: resource = R.string.retrying; break;
                 default: resource = R.string.waiting;
             }
             QuizAccessibilityService.this.status(token, resource);
