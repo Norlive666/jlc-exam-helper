@@ -11,8 +11,8 @@ android {
         applicationId = "com.ai.assistance.operit.quiz"
         minSdk = 30
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.2.2-test"
+        versionCode = 5
+        versionName = "0.2.3-test"
     }
 
     compileOptions {

@@ -12,6 +12,9 @@
     <string name="start">保存并进入测试页</string>
     <string name="stop">关闭识题</string>
     <string name="permission_needed">请先开启本应用的无障碍服务与通知权限。</string>
+    <string name="accessibility_needed">请先开启本应用的无障碍服务。</string>
+    <string name="notification_needed">请先允许本应用发送通知。</string>
+    <string name="accessibility_connecting">无障碍已开启，正在等待系统连接服务…</string>
     <string name="key_needed">请填写 DeepSeek API Key。</string>
     <string name="running">正在后台识题</string>
     <string name="waiting">等待题目出现</string>

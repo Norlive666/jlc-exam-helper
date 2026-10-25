@@ -3,6 +3,7 @@ package com.ai.assistance.operit.quiz;
 import android.Manifest;
 import android.app.Activity;
 import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -29,6 +30,7 @@ public final class MainActivity extends Activity {
     private EditText key;
     private TextView status;
     private boolean editing;
+    private boolean resumed;
     private final Runnable automaticStart = this::startIfReady;
 
     @Override public void onCreate(Bundle state) {
@@ -122,28 +124,37 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        resumed = true;
+        handler.removeCallbacks(automaticStart);
         if (!editing && settings.hasApiKey()) handler.postDelayed(automaticStart, 700);
     }
 
     @Override protected void onPause() {
+        resumed = false;
         handler.removeCallbacks(automaticStart);
         super.onPause();
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (requestCode == 1) handler.postDelayed(automaticStart, 300);
+        if (requestCode == 1 && resumed) handler.postDelayed(automaticStart, 300);
     }
 
     private void startIfReady() {
-        if (editing || !settings.hasApiKey()) return;
+        handler.removeCallbacks(automaticStart);
+        if (!resumed || editing || !settings.hasApiKey()) return;
         if (!getSystemService(NotificationManager.class).areNotificationsEnabled()) {
-            status.setText(R.string.permission_needed);
+            status.setText(R.string.notification_needed);
+            return;
+        }
+        if (!accessibilityEnabled()) {
+            status.setText(R.string.accessibility_needed);
             return;
         }
         QuizAccessibilityService service = QuizAccessibilityService.current();
         if (service == null) {
-            status.setText(R.string.permission_needed);
+            status.setText(R.string.accessibility_connecting);
+            handler.postDelayed(automaticStart, 500);
             return;
         }
         try {
@@ -153,6 +164,17 @@ public final class MainActivity extends Activity {
         } catch (Exception error) {
             status.setText(getString(R.string.error_prefix, error.getClass().getSimpleName()));
         }
+    }
+
+    private boolean accessibilityEnabled() {
+        String enabled = Settings.Secure.getString(getContentResolver(),
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (enabled == null) return false;
+        ComponentName own = new ComponentName(this, QuizAccessibilityService.class);
+        for (String component : enabled.split(":")) {
+            if (own.equals(ComponentName.unflattenFromString(component))) return true;
+        }
+        return false;
     }
 
     private TextView text(int resource, int size) {
