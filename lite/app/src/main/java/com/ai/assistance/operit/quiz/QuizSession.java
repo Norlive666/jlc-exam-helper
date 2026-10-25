@@ -19,6 +19,10 @@ final class QuizSession {
         List<QuizProtocol.Question> analyze(ScreenFrame frame) throws Exception;
     }
 
+    interface Sleeper {
+        void sleep(long millis) throws InterruptedException;
+    }
+
     private final Screen screen;
     private final Model model;
     private ScreenFrame previous;
@@ -27,6 +31,13 @@ final class QuizSession {
     QuizSession(Screen screen, Model model) {
         this.screen = screen;
         this.model = model;
+    }
+
+    void run(BooleanSupplier active, Sleeper sleeper) throws Exception {
+        while (active.getAsBoolean()) {
+            scan(active);
+            if (active.getAsBoolean()) sleeper.sleep(3000);
+        }
     }
 
     void scan(BooleanSupplier active) throws Exception {

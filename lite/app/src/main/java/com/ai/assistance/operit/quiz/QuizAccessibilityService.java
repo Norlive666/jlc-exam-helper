@@ -75,14 +75,8 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         task = worker.submit(() -> {
             QuizSession session = new QuizSession(new PhoneScreen(token), model);
             try {
-                while (active(token)) {
-                    if (!notificationAvailable()) {
-                        main.post(() -> { if (active(token)) stopAgent(); });
-                        return;
-                    }
-                    session.scan(() -> active(token) && notificationAvailable());
-                    Thread.sleep(3000);
-                }
+                session.run(() -> active(token) && notificationAvailable(), Thread::sleep);
+                if (active(token)) main.post(() -> { if (active(token)) stopAgent(); });
             } catch (InterruptedException stopped) {
                 Thread.currentThread().interrupt();
             } catch (Exception error) {
