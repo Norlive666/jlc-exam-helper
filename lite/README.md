@@ -115,12 +115,14 @@ APK 路径：`lite/app/build/outputs/apk/debug/app-debug.apk`。
 
 0.2.2-test 在原有 28 项测试外，增加历史容量/事件顺序、悬浮轻点/长按与截图隐藏、原生选中状态读取、未识别题目及未观察到点击变化等回归场景。
 
-2026-10-24，[GitHub Actions 构建](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40098053550) 已验证提交 `b420ed4`：**36 项测试全部通过**。APK 为 **2,622,888 字节**，已下载核对完整性、0.2.2-test 版本号、悬浮/历史/测试页及原 Operit 模块。
+0.2.4-test 增加启动授权状态、延迟连接、退出或编辑时取消等待、开启权限不启动、桌面再次点击启动、恢复旧页面不重放启动等回归测试。
 
-[下载 0.2.2-test APK 产物](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40098053550/artifacts/12560934189)，解压后安装 APK。
+2026-10-25，[GitHub Actions 构建](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40153370317) 已验证提交 `5d256cf`：**48 项测试全部通过**。APK 为 **2,624,844 字节**，已下载核对 SHA-256、完整性、0.2.4-test / versionCode 6、桌面入口配置，以及悬浮/历史/原 Operit 模块。
 
-SHA-256：`0f941a308d92e59012a8ee2072580080a2f93bb71340ba4b6b94d8448df50b88`。
+[下载 0.2.4-test APK 产物](https://github.com/Norlive666/jlc-exam-helper/actions/runs/40153370317/artifacts/12583701656)，解压后安装 APK。
 
-用户已反馈上一测试版可以识别题目；本次悬浮窗与真实手机的重识别、状态观察和点击确认效果仍需实测。
+SHA-256：`81d6ec81dd519db48915740a71ea1aa9476a0690b1b1036064d5e923b45c77d8`。
+
+用户已反馈之前的测试版可以识别题目；本次 Redmi 真机的桌面点击、最近任务恢复、后台运行与关闭行为仍需实测。测试和构建不能证明系统不会回收后台进程。
 
 许可证与改写来源见 [UPSTREAM.md](UPSTREAM.md)。
