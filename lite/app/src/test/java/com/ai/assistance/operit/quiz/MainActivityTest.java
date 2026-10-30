@@ -242,6 +242,46 @@ public class MainActivityTest {
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
     }
 
+    @Test public void countdownExpiringDuringLauncherDelayDoesNotOpenTestPage() {
+        MainActivity activity = open(true, true, false);
+        connectService(activity);
+        schedule(activity, "1");
+        controller.pause();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(59500));
+        controller.newIntent(launcherIntent());
+        controller.resume();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertTrue(new AgentSettings(activity).isRunning());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    @Test public void notificationCancelDuringLauncherDelayDoesNotRestartRecognition() throws Exception {
+        MainActivity activity = open(true, true, false);
+        connectService(activity);
+        schedule(activity, "1");
+        controller.pause();
+        controller.newIntent(launcherIntent());
+        controller.resume();
+        notifications(activity).getAllNotifications().get(0).contentIntent.send();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertFalse(new AgentSettings(activity).isRunning());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    @Test public void freshLauncherPageCannotReplayCancelledCountdown() throws Exception {
+        MainActivity activity = open(true, true, false);
+        connectService(activity);
+        schedule(activity, "1");
+        Notification notification = notifications(activity).getAllNotifications().get(0);
+        controller.pause().stop().destroy();
+        controller = Robolectric.buildActivity(MainActivity.class, launcherIntent()).setup();
+        activity = controller.get();
+        notification.contentIntent.send();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        assertFalse(new AgentSettings(activity).isRunning());
+        assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
     @Test public void immediateStartOverridesCountdown() {
         MainActivity activity = open(true, true, false);
         connectService(activity);
