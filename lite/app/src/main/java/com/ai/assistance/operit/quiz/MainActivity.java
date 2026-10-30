@@ -28,10 +28,12 @@ public final class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private AgentSettings settings;
     private EditText key;
+    private EditText delay;
     private TextView status;
     private boolean editing;
     private boolean resumed;
     private boolean startRequested;
+    private int requestedDelayMinutes = -1;
     private final Runnable automaticStart = this::startIfReady;
 
     @Override public void onCreate(Bundle state) {
@@ -107,21 +109,58 @@ public final class MainActivity extends Activity {
         content.addView(notifications);
 
         Button start = button(R.string.start);
-        start.setOnClickListener(view -> {
-            String apiKey = key.getText().toString().trim();
-            if (apiKey.isEmpty()) { status.setText(R.string.key_needed); return; }
-            try {
-                settings.saveApiKey(apiKey);
-                editing = false;
-                startRequested = true;
-                QuizAccessibilityService service = QuizAccessibilityService.current();
-                if (service != null) service.stopAgent();
-                startIfReady();
-            } catch (Exception error) {
-                status.setText(getString(R.string.settings_error, error.getClass().getSimpleName()));
+        start.setOnClickListener(view -> requestStart(0));
+        content.addView(start, spaced());
+
+        delay = new EditText(this);
+        delay.setSingleLine(true);
+        delay.setHint(R.string.delay_hint);
+        delay.setInputType(InputType.TYPE_CLASS_NUMBER);
+        delay.setOnFocusChangeListener((view, focused) -> {
+            if (focused) {
+                editing = true;
+                startRequested = false;
+                handler.removeCallbacks(automaticStart);
             }
         });
-        content.addView(start, spaced());
+        content.addView(delay, spaced());
+        content.addView(text(R.string.delay_caption, 13));
+        Button schedule = button(R.string.schedule);
+        schedule.setOnClickListener(view -> {
+            try {
+                int minutes = Integer.parseInt(delay.getText().toString().trim());
+                if (minutes <= 0) throw new NumberFormatException();
+                requestStart(minutes);
+            } catch (NumberFormatException error) {
+                status.setText(R.string.delay_invalid);
+            }
+        });
+        content.addView(schedule);
+
+        Button recognize = button(R.string.recognize_now);
+        recognize.setOnClickListener(view -> {
+            startRequested = false;
+            QuizAccessibilityService service = QuizAccessibilityService.current();
+            if (service == null || !settings.hasApiKey()) {
+                status.setText(R.string.test_configure_first);
+                return;
+            }
+            service.recognizeNow();
+            status.setText(settings.isRunning() ? R.string.running : R.string.ready);
+        });
+        content.addView(recognize, spaced());
+        Button history = button(R.string.history);
+        history.setOnClickListener(view -> startActivity(new Intent(this, QuizHistoryActivity.class)));
+        content.addView(history);
+        Button stop = button(R.string.stop);
+        stop.setOnClickListener(view -> {
+            startRequested = false;
+            handler.removeCallbacks(automaticStart);
+            QuizAccessibilityService service = QuizAccessibilityService.current();
+            if (service != null) service.stopAgent();
+            status.setText(R.string.stopped);
+        });
+        content.addView(stop);
         status = text(R.string.permission_needed, 14);
         content.addView(status);
         setContentView(scroll);
@@ -133,11 +172,28 @@ public final class MainActivity extends Activity {
         setIntent(intent);
         editing = intent.getBooleanExtra("edit_settings", false);
         startRequested = !editing && isLauncherIntent(intent);
+        requestedDelayMinutes = -1;
     }
 
     private boolean isLauncherIntent(Intent intent) {
         return Intent.ACTION_MAIN.equals(intent.getAction())
             && intent.hasCategory(Intent.CATEGORY_LAUNCHER);
+    }
+
+    private void requestStart(int minutes) {
+        String apiKey = key.getText().toString().trim();
+        if (apiKey.isEmpty()) { status.setText(R.string.key_needed); return; }
+        try {
+            settings.saveApiKey(apiKey);
+            editing = false;
+            startRequested = true;
+            requestedDelayMinutes = minutes;
+            QuizAccessibilityService service = QuizAccessibilityService.current();
+            if (service != null) service.stopAgent();
+            startIfReady();
+        } catch (Exception error) {
+            status.setText(getString(R.string.settings_error, error.getClass().getSimpleName()));
+        }
     }
 
     @Override protected void onResume() {
@@ -176,11 +232,24 @@ public final class MainActivity extends Activity {
             handler.postDelayed(automaticStart, 500);
             return;
         }
+        if (service.isScheduled() && (!startRequested || requestedDelayMinutes < 0)) {
+            startRequested = false;
+            long seconds = (service.remainingStartMillis() + 999) / 1000;
+            status.setText(getString(R.string.scheduled, seconds / 60, seconds % 60));
+            handler.postDelayed(automaticStart, 1000);
+            return;
+        }
         if (!startRequested) {
             status.setText(settings.isRunning() ? R.string.running : R.string.ready);
             return;
         }
         try {
+            if (requestedDelayMinutes > 0) {
+                service.scheduleAgent(requestedDelayMinutes);
+                startRequested = false;
+                startIfReady();
+                return;
+            }
             service.startAgent();
             startRequested = false;
             status.setText(R.string.running);

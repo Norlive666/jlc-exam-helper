@@ -43,7 +43,7 @@ public final class QuizHistoryActivity extends Activity {
             return insets;
         });
         TextView heading = new TextView(this);
-        heading.setText("识题历史\n本次运行最近30次，不保存截图。返回题目页后可轻点悬浮窗重试。");
+        heading.setText("识题历史\n本次运行最近30次，不保存截图。配置页和测试页可立即重识别。");
         heading.setTextColor(Color.BLACK);
         heading.setTextSize(17);
         content.addView(heading);

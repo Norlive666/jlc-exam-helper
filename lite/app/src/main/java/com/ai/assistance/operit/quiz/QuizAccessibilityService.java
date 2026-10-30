@@ -13,6 +13,7 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -38,7 +39,8 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     private DeepSeekClient client;
     private Future<?> task;
     private volatile boolean running;
-    private QuizOverlay overlay;
+    private long scheduledStartAt;
+    private final Runnable countdown = this::checkCountdown;
     private long currentRound;
 
     static QuizAccessibilityService current() { return instance; }
@@ -57,15 +59,12 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     }
 
     void startAgent() throws Exception {
+        cancelCountdown();
         if (!notificationAvailable()) {
             throw new IllegalStateException(getString(R.string.permission_needed));
         }
         if (running) return;
         DeepSeekClient model = new DeepSeekClient(settings.apiKey());
-        if (overlay == null) overlay = new QuizOverlay(this, this::recognizeNow, () ->
-            startActivity(new Intent(this, QuizHistoryActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-        overlay.show();
-        overlay.status("等待题目");
         currentRound = 0;
         client = model;
         long token = generation.incrementAndGet();
@@ -94,6 +93,43 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         });
     }
 
+    void scheduleAgent(int minutes) throws Exception {
+        if (minutes <= 0) throw new IllegalArgumentException(getString(R.string.delay_invalid));
+        if (!notificationAvailable()) {
+            throw new IllegalStateException(getString(R.string.notification_needed));
+        }
+        settings.apiKey();
+        stopAgent();
+        scheduledStartAt = SystemClock.elapsedRealtime() + TimeUnit.MINUTES.toMillis(minutes);
+        checkCountdown();
+    }
+
+    boolean isScheduled() { return scheduledStartAt != 0; }
+
+    long remainingStartMillis() {
+        return isScheduled() ? Math.max(0, scheduledStartAt - SystemClock.elapsedRealtime()) : 0;
+    }
+
+    private void cancelCountdown() {
+        scheduledStartAt = 0;
+        main.removeCallbacks(countdown);
+    }
+
+    private void checkCountdown() {
+        if (!isScheduled()) return;
+        if (!notificationAvailable()) { stopAgent(); return; }
+        long remaining = remainingStartMillis();
+        if (remaining > 0) {
+            long seconds = (remaining + 999) / 1000;
+            showNotification(getString(R.string.scheduled, seconds / 60, seconds % 60));
+            main.postDelayed(countdown, Math.min(1000, remaining));
+            return;
+        }
+        cancelCountdown();
+        try { startAgent(); }
+        catch (Exception error) { showError(error); }
+    }
+
     private void cancelWork() {
         running = false;
         generation.incrementAndGet();
@@ -110,9 +146,9 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     }
 
     void stopAgent() {
+        cancelCountdown();
         if (running && currentRound != 0) HISTORY.event(currentRound, "已停止", "任务已取消");
         cancelWork();
-        if (overlay != null) overlay.close();
         getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID);
     }
 
@@ -132,6 +168,12 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
     }
 
     @Override public void onInterrupt() { stopAgent(); super.onInterrupt(); }
+
+    @Override public boolean onUnbind(Intent intent) {
+        stopAgent();
+        if (instance == this) instance = null;
+        return super.onUnbind(intent);
+    }
 
     @Override public void onDestroy() {
         stopAgent();
@@ -167,10 +209,6 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         if (detail == null) detail = error.getClass().getSimpleName();
         if (currentRound == 0) currentRound = HISTORY.begin("当前屏幕");
         HISTORY.event(currentRound, "识题暂停", detail);
-        if (overlay != null) {
-            overlay.captureHidden(false);
-            overlay.status("识题暂停\n" + detail);
-        }
         showNotification(getString(R.string.error_prefix,
             detail));
     }
@@ -228,13 +266,6 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         PhoneScreen(long token) { this.token = token; }
 
         @Override public ScreenFrame capture() throws Exception {
-            try {
-                hideOverlay();
-                return captureFrame();
-            } finally { restoreOverlay(); }
-        }
-
-        private ScreenFrame captureFrame() throws Exception {
             CompletableFuture<WindowState> snapshot = new CompletableFuture<>();
             main.post(() -> {
                 try {
@@ -287,13 +318,6 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
         }
 
         @Override public boolean tap(QuizProtocol.Tap tap) throws Exception {
-            try {
-                hideOverlay();
-                return performTap(tap);
-            } finally { restoreOverlay(); }
-        }
-
-        private boolean performTap(QuizProtocol.Tap tap) throws Exception {
             ScreenFrame expected = lastCaptured;
             CompletableFuture<Boolean> result = new CompletableFuture<>();
             main.post(() -> {
@@ -326,20 +350,6 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
             return clicked;
         }
 
-        private void hideOverlay() throws Exception {
-            CompletableFuture<Void> hidden = new CompletableFuture<>();
-            main.post(() -> {
-                if (active(token) && overlay != null) overlay.captureHidden(true);
-                // Let the compositor remove the overlay before screenshots or gestures.
-                main.postDelayed(() -> hidden.complete(null), 120);
-            });
-            hidden.get(5, TimeUnit.SECONDS);
-        }
-
-        private void restoreOverlay() {
-            main.post(() -> { if (active(token) && overlay != null) overlay.captureHidden(false); });
-        }
-
         @Override public void trace(String stage, String detail) {
             String information = stage.equals("无法读取屏幕") ? captureDetail : detail;
             main.post(() -> {
@@ -354,9 +364,6 @@ public final class QuizAccessibilityService extends UIAccessibilityService {
                 if (round == 0) round = HISTORY.begin("当前屏幕");
                 currentRound = round;
                 HISTORY.event(round, stage, information);
-                String brief = information.replace('\n', ' ');
-                if (brief.length() > 42) brief = brief.substring(0, 42) + "…";
-                if (overlay != null) overlay.status(stage + "\n" + brief);
             });
         }
 

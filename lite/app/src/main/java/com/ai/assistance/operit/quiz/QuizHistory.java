@@ -39,7 +39,7 @@ final class QuizHistory {
     synchronized void clear() { rounds.clear(); version++; }
 
     synchronized String text() {
-        if (rounds.isEmpty()) return "暂无记录。返回题目页，轻点悬浮窗开始识别。";
+        if (rounds.isEmpty()) return "暂无记录。可从配置页或测试页开始识别，再返回题目页面。";
         StringBuilder text = new StringBuilder();
         for (Round round : rounds) {
             text.append("第 ").append(round.id).append(" 次 · ").append(round.time)

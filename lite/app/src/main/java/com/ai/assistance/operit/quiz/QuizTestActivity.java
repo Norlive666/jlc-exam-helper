@@ -88,6 +88,17 @@ public final class QuizTestActivity extends Activity {
         button(controls, R.string.test_settings, () -> startActivity(
             new Intent(this, MainActivity.class).putExtra("edit_settings", true)));
         button(controls, R.string.test_background, () -> moveTaskToBack(true));
+        LinearLayout diagnostics = row(content);
+        button(diagnostics, R.string.recognize_now, () -> {
+            QuizAccessibilityService service = QuizAccessibilityService.current();
+            if (service == null || !new AgentSettings(this).hasApiKey()) {
+                status.setText(R.string.test_configure_first);
+                return;
+            }
+            service.recognizeNow();
+            status.setText(new AgentSettings(this).isRunning() ? R.string.test_started : R.string.test_configure_first);
+        });
+        button(diagnostics, R.string.history, () -> startActivity(new Intent(this, QuizHistoryActivity.class)));
         status = text(getString(R.string.test_status), 13);
         content.addView(status);
         setContentView(scroll);

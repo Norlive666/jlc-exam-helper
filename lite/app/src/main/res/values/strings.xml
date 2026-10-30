@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Operit 识题</string>
+    <string name="app_name">考试监督</string>
     <string name="accessibility_description">读取当前屏幕，将题目和选项发送至你配置的 DeepSeek API，并自动点击选项。任务在后台运行，可从通知栏关闭。支持安卓 11 及以上。</string>
-    <string name="heading">Operit 识题</string>
-    <string name="intro">临时测试版：填写 DeepSeek API Key 并开启权限后，点击桌面图标或下方按钮开始识题。开启权限本身不会启动识题，测试页可转到后台。</string>
+    <string name="heading">考试监督</string>
+    <string name="intro">填写 DeepSeek API Key 并开启权限后，可立即开始或设置一次倒计时。无悬浮窗，通知栏可关闭；开启权限本身不会启动答题。</string>
     <string name="api_key_hint">DeepSeek API Key</string>
     <string name="api_caption">官方接口 · deepseek-flash</string>
     <string name="data_notice">运行时屏幕截图与界面文字会发送至 DeepSeek。应用仅执行选项点击，不翻页、不交卷。截图在应用私有缓存中短暂处理后删除，不写入相册。</string>
     <string name="permissions">开启无障碍服务</string>
     <string name="notifications">允许通知</string>
     <string name="start">保存并进入测试页</string>
+    <string name="delay_hint">延时分钟数</string>
+    <string name="delay_caption">输入正整数分钟，点击“定时开始”后倒计时。到时在当前页面开始，不跳转页面。</string>
+    <string name="delay_invalid">请输入有效的正整数分钟数。</string>
+    <string name="schedule">定时开始</string>
+    <string name="scheduled">定时等待，剩余 %1$d 分 %2$d 秒；可关闭取消</string>
+    <string name="recognize_now">立即重识别</string>
+    <string name="history">识题历史</string>
+    <string name="stopped">已关闭识题及倒计时</string>
     <string name="stop">关闭识题</string>
     <string name="permission_needed">请先开启本应用的无障碍服务与通知权限。</string>
     <string name="accessibility_needed">请先开启本应用的无障碍服务。</string>
@@ -29,7 +37,7 @@
     <string name="error_prefix">识题暂停：%1$s</string>
     <string name="settings_error">无法保存 API Key：%1$s</string>
     <string name="test_heading">临时答题测试</string>
-    <string name="test_intro">轻点悬浮窗立即识题，长按看历史；选择后手动核对并切换下一题。通知栏可关闭。</string>
+    <string name="test_intro">等待自动选择后手动核对并切换下一题。下方可立即重识别、查看历史；通知栏可关闭，配置页可设置定时开始。</string>
     <string name="test_progress">第 %1$d / %2$d 题 · %3$s</string>
     <string name="test_check">核对本题</string>
     <string name="test_reset">重做本题</string>
