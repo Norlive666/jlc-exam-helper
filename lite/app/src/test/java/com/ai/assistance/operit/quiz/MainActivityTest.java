@@ -207,7 +207,7 @@ public class MainActivityTest {
         connectService(activity);
         schedule(activity, "1");
         Notification notification = notifications(activity).getAllNotifications().get(0);
-        notification.contentIntent.send();
+        closeFromNotification(activity, notification);
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(2));
         assertFalse(new AgentSettings(activity).isRunning());
         assertEquals(0, notifications(activity).getAllNotifications().size());
@@ -262,7 +262,7 @@ public class MainActivityTest {
         controller.pause();
         controller.newIntent(launcherIntent());
         controller.resume();
-        notifications(activity).getAllNotifications().get(0).contentIntent.send();
+        closeFromNotification(activity, notifications(activity).getAllNotifications().get(0));
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
         assertFalse(new AgentSettings(activity).isRunning());
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
@@ -276,7 +276,7 @@ public class MainActivityTest {
         controller.pause().stop().destroy();
         controller = Robolectric.buildActivity(MainActivity.class, launcherIntent()).setup();
         activity = controller.get();
-        notification.contentIntent.send();
+        closeFromNotification(activity, notification);
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
         assertFalse(new AgentSettings(activity).isRunning());
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
@@ -364,6 +364,14 @@ public class MainActivityTest {
 
     private org.robolectric.shadows.ShadowNotificationManager notifications(Context context) {
         return Shadows.shadowOf(context.getSystemService(NotificationManager.class));
+    }
+
+    private void closeFromNotification(Context context, Notification notification) {
+        // Robolectric does not dispatch this manifest receiver without an intent filter.
+        // Verify our actual PendingIntent target, then deliver it to the real receiver.
+        Intent intent = Shadows.shadowOf(notification.contentIntent).getSavedIntent();
+        assertEquals(new ComponentName(context, StopReceiver.class), intent.getComponent());
+        new StopReceiver().onReceive(context, intent);
     }
 
     private void schedule(MainActivity activity, String minutes) {

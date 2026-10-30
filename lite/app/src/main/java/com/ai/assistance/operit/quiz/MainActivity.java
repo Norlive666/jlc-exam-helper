@@ -40,7 +40,7 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         settings = new AgentSettings(this);
         editing = getIntent().getBooleanExtra("edit_settings", false);
-        startRequested = state == null && !editing && isLauncherIntent(getIntent());
+        startRequested = state == null && !editing && launcherRequestsStart(getIntent());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         getWindow().setDecorFitsSystemWindows(false);
 
@@ -171,13 +171,15 @@ public final class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         editing = intent.getBooleanExtra("edit_settings", false);
-        startRequested = !editing && isLauncherIntent(intent);
+        startRequested = !editing && launcherRequestsStart(intent);
         requestedDelayMinutes = -1;
     }
 
-    private boolean isLauncherIntent(Intent intent) {
+    private boolean launcherRequestsStart(Intent intent) {
+        QuizAccessibilityService service = QuizAccessibilityService.current();
         return Intent.ACTION_MAIN.equals(intent.getAction())
-            && intent.hasCategory(Intent.CATEGORY_LAUNCHER);
+            && intent.hasCategory(Intent.CATEGORY_LAUNCHER)
+            && (service == null || !service.isScheduled());
     }
 
     private void requestStart(int minutes) {
